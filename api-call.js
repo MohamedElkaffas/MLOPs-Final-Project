@@ -4,8 +4,8 @@ async function getPredictedLabel(processed_landmarks) {
   try {
     const API_BASE_URL = "http://localhost:8001";
     
-    console.log("🎯 Calling Hand Gesture API");
-    console.log("📊 Landmarks length:", processed_landmarks.length);
+    console.log("Calling Hand Gesture API");
+    console.log("Landmarks length:", processed_landmarks.length);
     
     const response = await fetch(`${API_BASE_URL}/predict`, {
       method: 'POST',
@@ -18,12 +18,12 @@ async function getPredictedLabel(processed_landmarks) {
     });
     
     if (!response.ok) {
-      console.error(`❌ API Error: ${response.status} ${response.statusText}`);
+      console.error(`API Error: ${response.status} ${response.statusText}`);
       return null;
     }
     
     const data = await response.json();
-    console.log("📥 API Response:", data);
+    console.log("API Response:", data);
     
     // Simple action mapping
     const actionMapping = {
@@ -54,11 +54,11 @@ async function getPredictedLabel(processed_landmarks) {
       return null;
     }
     
-    console.log(`✅ ${data.gesture_name} -> ${maze_action} -> ${frontendAction} (${confidence.toFixed(2)})`);
+    console.log(`${data.gesture_name} -> ${maze_action} -> ${frontendAction} (${confidence.toFixed(2)})`);
     return frontendAction;
     
   } catch (error) {
-    console.error("❌ API Error:", error);
+    console.error("API Error:", error);
     return null;
   }
 }
