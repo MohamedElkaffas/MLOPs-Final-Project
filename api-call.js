@@ -2,7 +2,7 @@
 
 async function getPredictedLabel(processed_landmarks) {
   try {
-    const API_BASE_URL = "http://localhost:8001";
+    const API_BASE_URL = "http://localhost:8000";
     
     console.log("Calling Hand Gesture API");
     console.log("Landmarks length:", processed_landmarks.length);
