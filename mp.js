@@ -1,84 +1,106 @@
-// mp.js
+// mp.js - Fixed with proper normalization
+const videoElement = document.getElementsByClassName("input_video")[0];
+const canvasElement = document.getElementsByClassName("output_canvas")[0];
+const canvasCtx = canvasElement.getContext("2d");
+let arrow = null;
 
-import {Hands, HAND_CONNECTIONS} from '@mediapipe/hands';
-import {Camera}               from '@mediapipe/camera_utils';
-import {drawConnectors,
-        drawLandmarks}       from '@mediapipe/drawing_utils';
-
-// 1) Grab references to your <video> and <canvas> elements in index.html:
-const videoElement  = document.querySelector('#input_video');
-const canvasElement = document.querySelector('#output_canvas');
-const canvasCtx     = canvasElement.getContext('2d');
-
-// 2) This function will be called on each camera frame.  
-//    It receives a results object, containing multiHandLandmarks (array of 21-point lists).
-function onResults(results) {
-  // draw the raw camera frame to our <canvas>
+async function onResults(results) {
   canvasCtx.save();
   canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-  canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-    // For simplicity, just take the first detected hand:
-    const handLandmarks = results.multiHandLandmarks[0];
-
-    // draw the hand skeleton / points on screen (optional)
-    drawConnectors(canvasCtx, handLandmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
-    drawLandmarks(canvasCtx, handLandmarks, {color: '#FF0000', lineWidth: 2});
-
-    // 3) Normalize around the wrist (landmark #0) in 3D:
-    const wrist = handLandmarks[0];         // {x:…, y:…, z:…}
-    const midTip = handLandmarks[11];       // landmark #12 (index 11)
-    // compute scale = Euclidean distance between wrist and midTip in 3D
-    const dx = midTip.x - wrist.x;
-    const dy = midTip.y - wrist.y;
-    const dz = midTip.z - wrist.z;
-    let scale = Math.sqrt(dx*dx + dy*dy + dz*dz);
-    if (scale === 0) scale = 1.0;
-
-    // flatten all 21 landmarks into one 63‐element array:
-    const normalizedLandmarks = [];
-    for (let i = 0; i < handLandmarks.length; i++) {
-      const lm = handLandmarks[i];
-      // subtract wrist, then divide by scale
-      normalizedLandmarks.push(
-        (lm.x - wrist.x) / scale,
-        (lm.y - wrist.y) / scale,
-        (lm.z - wrist.z) / scale
-      );
-    }
-
-    // 4) Send those 63 floats to your backend:
-    //    (Assumes you have a function getPredictedLabel(...) defined elsewhere)
-    getPredictedLabel(normalizedLandmarks).then((action) => {
-      if (action) {
-        // e.g. move your maze according to action
-        console.log('Moving:', action);
+  canvasCtx.drawImage(
+    results.image,
+    0,
+    0,
+    canvasElement.width,
+    canvasElement.height
+  );
+  
+  if (results.multiHandLandmarks) {
+    for (const landmarks of results.multiHandLandmarks) {
+      drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {
+        color: "#00FF00",
+        lineWidth: 5,
+      });
+      drawLandmarks(canvasCtx, landmarks, {
+        color: "#FF0000",
+        lineWidth: 2,
+      });
+      
+      // FIXED: Proper normalization and validation
+      const rawLandmarksArray = [];
+      
+      console.log("Processing landmarks:", landmarks.length);
+      
+      // Extract and normalize landmarks
+      for (let i = 0; i < landmarks.length; i++) {
+        let x = landmarks[i].x;
+        let y = landmarks[i].y; 
+        let z = landmarks[i].z;
+        
+        // Ensure normalization between 0 and 1
+        // MediaPipe should already provide normalized coordinates, but let's be safe
+        x = Math.max(0, Math.min(1, x));
+        y = Math.max(0, Math.min(1, y));
+        
+        // Z coordinate normalization (MediaPipe z is typically in a different range)
+        // MediaPipe z represents depth relative to wrist, usually between -0.1 to 0.1
+        // We need to normalize it to 0-1 range
+        z = (z + 0.1) / 0.2;  // Convert from [-0.1, 0.1] to [0, 1]
+        z = Math.max(0, Math.min(1, z));
+        
+        rawLandmarksArray.push(x, y, z);
       }
-    });
+      
+      console.log("Normalized landmarks length:", rawLandmarksArray.length);
+      console.log("Sample coordinates:", {
+        first_x: rawLandmarksArray[0].toFixed(3),
+        first_y: rawLandmarksArray[1].toFixed(3), 
+        first_z: rawLandmarksArray[2].toFixed(3),
+        min: Math.min(...rawLandmarksArray).toFixed(3),
+        max: Math.max(...rawLandmarksArray).toFixed(3)
+      });
+      
+      // Validate that all coordinates are between 0 and 1
+      const allValid = rawLandmarksArray.every(coord => coord >= 0 && coord <= 1);
+      if (!allValid) {
+        console.error("Some coordinates are not normalized properly!");
+        console.log("Out of range values:", rawLandmarksArray.filter(coord => coord < 0 || coord > 1));
+        continue; // Skip this frame
+      }
+      
+      const arrow = await getPredictedLabel(rawLandmarksArray);
+      if (arrow) {
+        triggerArrowKey("keydown", arrow);
+        setTimeout(() => {
+          triggerArrowKey("keyup", arrow);
+        }, 100);
+      }
+    }
   }
-
   canvasCtx.restore();
 }
 
-// 5) Set up the MediaPipe Hands “solution”:
 const hands = new Hands({
-  locateFile: (file) => https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}
+  locateFile: (file) => {
+    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+  },
 });
+
 hands.setOptions({
-  maxNumHands: 1,
+  maxNumHands: 2,
   modelComplexity: 1,
-  minDetectionConfidence: 0.25,
-  minTrackingConfidence:  0.25
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5,
 });
+
 hands.onResults(onResults);
 
-// 6) Hook up your webcam to feed frames into MP Hands:
 const camera = new Camera(videoElement, {
   onFrame: async () => {
-    await hands.send({image: videoElement});
+    await hands.send({ image: videoElement });
   },
-  width:  640,
-  height: 480
+  width: 1280,
+  height: 720,
 });
+
 camera.start();
