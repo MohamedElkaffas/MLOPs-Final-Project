@@ -1,10 +1,10 @@
-// mp.js  — send exactly 63 floats (x,y,z) per hand to the backend
+// mp.js  — send exactly 63 floats (x,y,z) per detected hand to backend
 
 import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
 import { HAND_CONNECTIONS, Hands } from "@mediapipe/hands";
 import { Camera } from "@mediapipe/camera_utils";
 
-// (Assumes getPredictedLabel is already defined in api-call.js and imported here)
+// (Assumes getPredictedLabel is already defined in api-call.js)
 import { getPredictedLabel } from "./api-call.js";
 
 const videoElement = document.getElementsByClassName("input_video")[0];
@@ -35,7 +35,7 @@ async function onResults(results) {
 
   if (results.multiHandLandmarks) {
     for (const handLandmarks of results.multiHandLandmarks) {
-      // Draw skeleton on canvas
+      // 1) Draw the skeleton & landmarks
       drawConnectors(canvasCtx, handLandmarks, HAND_CONNECTIONS, {
         color: "#00FF00",
         lineWidth: 5,
@@ -45,18 +45,24 @@ async function onResults(results) {
         lineWidth: 2,
       });
 
-      // 1) Flatten the 21 {x,y,z} into a single [63-length] array of floats
+      // 2) Flatten into [63 floats]
       const raw63 = flattenLandmarks(handLandmarks);
-      console.log("Flattened landmarks (63 floats):", raw63);
 
-      // 2) Call your existing getPredictedLabel(...) which expects exactly that array
-      const action = await getPredictedLabel(raw63);
-      if (action) {
-        // If getPredictedLabel returns, e.g., "left" / "up" / "right" etc., simulate arrow key
-        triggerArrowKey("keydown", action);
-        setTimeout(() => {
-          triggerArrowKey("keyup", action);
-        }, 100);
+      // 3) Call the API endpoint
+      const prediction = await getPredictedLabel(raw63);
+      if (prediction) {
+        const { maze_action, confidence, gesture_name } = prediction;
+
+        // 4) Map to arrow key events if desired:
+        //    (e.g. “up”, “down”, “left”, “right”)
+        if (confidence >= 0.4) {
+          // Simplest example: 
+          // if maze_action is “LEFT”, simulate ArrowLeft key
+          triggerArrowKey("keydown", maze_action);
+          setTimeout(() => {
+            triggerArrowKey("keyup", maze_action);
+          }, 100);
+        }
       }
     }
   }
@@ -70,10 +76,10 @@ const hands = new Hands({
   },
 });
 hands.setOptions({
-  maxNumHands: 1,              // track one hand
+  maxNumHands: 1,
   modelComplexity: 1,
-  minDetectionConfidence: 0.5,
-  minTrackingConfidence: 0.5,
+  minDetectionConfidence: 0.1,
+  minTrackingConfidence: 0.1,
 });
 hands.onResults(onResults);
 
@@ -86,10 +92,16 @@ const camera = new Camera(videoElement, {
 });
 camera.start();
 
-// Utility to dispatch arrow‐key events (unchanged from your snippet)
-function triggerArrowKey(type, direction) {
-  const keyMap = { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" };
-  const key = keyMap[direction];
+// Utility to dispatch arrow‐key events:
+function triggerArrowKey(type, action) {
+  // action could be “UP” | “DOWN” | “LEFT” | “RIGHT” | etc.
+  const keyMap = {
+    UP: "ArrowUp",
+    DOWN: "ArrowDown",
+    LEFT: "ArrowLeft",
+    RIGHT: "ArrowRight",
+  };
+  const key = keyMap[action];
   if (!key) return;
   const event = new KeyboardEvent(type, { key });
   document.dispatchEvent(event);
