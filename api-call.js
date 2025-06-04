@@ -47,7 +47,7 @@ async function getPredictedLabel(processed_landmarks) {
     const confidence = data.confidence || 0;
     
     // Simple fixed threshold
-    const MIN_CONFIDENCE = 0.4;  // 40% - good for game responsiveness
+    const MIN_CONFIDENCE = 0.1;  // 40% - good for game responsiveness
     
     if (confidence < MIN_CONFIDENCE) {
       console.log(`⚠️ Low confidence (${confidence.toFixed(2)}), ignoring gesture`);
