@@ -2,7 +2,7 @@
 async function getPredictedLabel(processed_landmarks) {
   try {
     const API_BASE_URL = "https://oyrnfmwvrjoh.eu-central-1.clawcloudrun.com";
-    // Automatically detect environment
+    // Automatically detect
     // const API_BASE_URL = window.location.hostname === 'localhost' 
     //  ? "http://localhost:8001"  // Local development
     //  : "https://agkckrhhrjhv.eu-central-1.clawcloudrun.com";  // Production
