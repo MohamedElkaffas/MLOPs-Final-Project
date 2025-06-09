@@ -36,7 +36,7 @@ An immersive 3D maze game showcasing **end-to-end MLOps practices** - from model
 
 ### 🤖 **MLOps Excellence**
 - **Complete ML Pipeline**: Training → Validation → Deployment → Monitoring
-- **Real-Time Inference**: Sub-100ms gesture recognition with XGBoost
+- **Real-Time Inference**: Sub-100ms gesture recognition with Loaded SVM
 - **Model Versioning**: MLflow experiment tracking and model management
 - **Production Monitoring**: Prometheus metrics + Grafana dashboards
 - **Containerized Deployment**: Docker with multi-stage builds
@@ -65,7 +65,7 @@ An immersive 3D maze game showcasing **end-to-end MLOps practices** - from model
 │   Frontend      │────│   ML API         │────│   Monitoring    │
 │   (Browser)     │    │   (FastAPI)      │    │   (Prom+Grafana)│
 │                 │    │                  │    │                 │
-│ • 3D Maze Game  │    │ • XGBoost Model  │    │ • Metrics       │
+│ • 3D Maze Game  │    │ • Loaded SVM Model  │    │ • Metrics       │
 │ • MediaPipe     │    │ • Preprocessing  │    │ • Health Checks │
 │ • Real-time     │    │ • Validation     │    │ • Dashboards    │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
@@ -74,7 +74,7 @@ An immersive 3D maze game showcasing **end-to-end MLOps practices** - from model
 ### **Data Flow Pipeline**
 1. **Capture**: Webcam → MediaPipe → 63 hand landmarks (21 points × 3 coordinates)
 2. **Preprocess**: Normalize, re-center around wrist, scale by finger distance
-3. **Inference**: XGBoost model predicts gesture (42 features → 14 classes)
+3. **Inference**: Loaded SVM model predicts gesture (42 features → 14 classes)
 4. **Action**: Map gesture to maze movement with confidence thresholding
 5. **Render**: Update 3D physics and render next frame
 
@@ -163,7 +163,7 @@ MLOPs-Final-Project/
 │   ├── models.py               # Pydantic data models
 │   └── main.py                 # FastAPI application
 ├── 📁 model/                   # Trained ML models
-│   ├── best_hand_gesture.pkl   # XGBoost classifier
+│   ├── best_hand_gesture.pkl   # Loaded SVM classifier
 │   └── label_encoder.pkl       # Label encoder
 ├── 📁 monitoring/              # Monitoring configuration
 │   ├── 📁 grafana/             # Dashboard configs
