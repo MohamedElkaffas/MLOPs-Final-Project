@@ -1,5 +1,4 @@
 // api-call.js - Clean and Simple Version
-
 async function getPredictedLabel(processed_landmarks) {
   try {
     const API_BASE_URL = "oyrnfmwvrjoh.eu-central-1.clawcloudrun.com";
